@@ -31,7 +31,7 @@ apps/
 
 1. Install dependencies in both apps.
 2. Copy environment files.
-3. Point `DATABASE_URL` to your relational database.
+3. Point `DATABASE_URL` to PostgreSQL.
 4. Seed demo data.
 5. Start API and frontend.
 
@@ -45,6 +45,14 @@ npx prisma db push
 npx prisma db seed
 npm run dev
 ```
+
+For local API development, start the bundled Postgres service first:
+
+```bash
+docker compose up -d postgres
+```
+
+Prisma CLI config now lives in [apps/api/prisma.config.ts](/Users/ankitverma/Projects/Hit_and_try/projectmgt/apps/api/prisma.config.ts) instead of `package.json`, which keeps the project compatible with current Prisma CLI behavior and Render builds.
 
 ## Frontend
 
