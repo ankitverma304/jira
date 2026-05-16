@@ -14,7 +14,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CLIENT_URL
-        value: https://projectmgt-web.onrender.com
+        value: https://projectmgt-web.onrender.com,https://projectmgt-web-*.onrender.com
 
   - type: web
     name: projectmgt-web
@@ -24,7 +24,7 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: https://projectmgt-api.onrender.com/api
+        value: https://projectmgt-api-r2sf.onrender.com/api
     routes:
       - type: rewrite
         source: /*
