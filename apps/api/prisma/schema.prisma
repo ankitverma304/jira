@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String          @id @default(cuid())
+  name             String
+  email            String          @unique
+  passwordHash     String
+  role             String          @default("USER")
+  isActive         Boolean         @default(true)
+  totalPoints      Int             @default(0)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  managedProjects  Project[]       @relation("ProjectManager")
+  memberships      ProjectMember[]
+  assignedTickets  Ticket[]        @relation("TicketAssignee")
+  reportedTickets  Ticket[]        @relation("TicketReporter")
+  createdComments  TicketComment[]
+  ticketHistories  TicketHistory[]
+  timeLogs         TimeLog[]
+  pointEvents      TicketPointsLog[]
+  reportedBugs     Bug[]           @relation("BugReporter")
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+}
+
+model Project {
+  id               String          @id @default(cuid())
+  code             String          @unique
+  name             String
+  description      String?
+  clientName       String?
+  type             String?
+  priority         String          @default("MEDIUM")
+  startDate        DateTime?
+  endDate          DateTime?
+  expectedDuration Int?
+  status           String          @default("PLANNED")
+  tags             String          @default("")
+  managerId        String?
+  manager          User?           @relation("ProjectManager", fields: [managerId], references: [id])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  members          ProjectMember[]
+  tickets          Ticket[]
+  attachments      Attachment[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  roleLabel String?
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Ticket {
+  id               String             @id @default(cuid())
+  sequence         Int
+  ticketNumber     String             @unique
+  projectId        String
+  title            String
+  description      String?
+  priority         String             @default("MEDIUM")
+  status           String             @default("TODO")
+  assigneeId       String?
+  reporterId       String?
+  startDate        DateTime?
+  endDate          DateTime?
+  estimatedHours   Float?
+  actualHours      Float              @default(0)
+  tags             String             @default("")
+  watchers         String             @default("")
+  supportRequired  Boolean            @default(false)
+  isBug            Boolean            @default(false)
+  bugSeverity      String?
+  closedAt         DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  project          Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee         User?              @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  reporter         User?              @relation("TicketReporter", fields: [reporterId], references: [id])
+  attachments      Attachment[]
+  bugs             Bug[]
+  checklistItems   TicketChecklistItem[]
+  comments         TicketComment[]
+  histories        TicketHistory[]
+  timeLogs         TimeLog[]
+  pointEvents      TicketPointsLog[]
+  dependenciesFrom TicketDependency[] @relation("DependencyFrom")
+  dependenciesTo   TicketDependency[] @relation("DependencyTo")
+}
+
+model TicketDependency {
+  id                String   @id @default(cuid())
+  ticketId          String
+  dependsOnTicketId String
+  createdAt         DateTime @default(now())
+  ticket            Ticket   @relation("DependencyFrom", fields: [ticketId], references: [id], onDelete: Cascade)
+  dependsOnTicket   Ticket   @relation("DependencyTo", fields: [dependsOnTicketId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, dependsOnTicketId])
+}
+
+model TicketChecklistItem {
+  id        String   @id @default(cuid())
+  ticketId  String
+  title     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model TicketComment {
+  id          String       @id @default(cuid())
+  ticketId    String
+  authorId    String
+  content     String
+  mentions    String       @default("")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  ticket      Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  attachments Attachment[]
+}
+
+model TicketHistory {
+  id          String   @id @default(cuid())
+  ticketId    String
+  actorId     String
+  type        String
+  field       String?
+  fromValue   String?
+  toValue     String?
+  description String?
+  createdAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actor       User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+}
+
+model TimeLog {
+  id          String   @id @default(cuid())
+  ticketId    String
+  userId      String
+  hours       Float
+  description String?
+  workDate    DateTime?
+  isBillable  Boolean  @default(true)
+  loggedAt    DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TicketPointsLog {
+  id          String   @id @default(cuid())
+  ticketId    String
+  userId      String
+  eventType   String
+  delta       Int
+  bugSeverity String?
+  fixMinutes  Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Bug {
+  id           String    @id @default(cuid())
+  ticketId     String
+  severity     String
+  reportedById String
+  fixStart     DateTime?
+  fixEnd       DateTime?
+  fixMinutes   Int?
+  createdAt    DateTime  @default(now())
+  ticket       Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  reportedBy   User      @relation("BugReporter", fields: [reportedById], references: [id], onDelete: Cascade)
+}
+
+model Attachment {
+  id         String         @id @default(cuid())
+  fileName   String
+  fileUrl    String
+  mimeType   String?
+  size       Int?
+  projectId  String?
+  ticketId   String?
+  commentId  String?
+  createdAt  DateTime       @default(now())
+  project    Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ticket     Ticket?        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  comment    TicketComment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  metadata   String?
+  createdAt  DateTime @default(now())
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+}

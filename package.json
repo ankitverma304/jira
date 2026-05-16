@@ -1,0 +1,11 @@
+{
+  "name": "projectmgt",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspace apps/api && npm install --workspace apps/web"
+  }
+}
